@@ -1,12 +1,11 @@
 package agentes;
 
-import contenidoSerializado.Sensores;
+import agentesc.Contenedor;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.UnreadableException;
 import jdk.jshell.MethodSnippet;
-
 import java.util.logging.Level;
 
 public class Agente2 extends Agent {
@@ -14,62 +13,49 @@ public class Agente2 extends Agent {
     protected void setup() {                //crea el primer hilo en la creacion del agente
         addBehaviour(new Comportamiento());
     }
+    @Override
+    protected void takeDown(){          //last wishes
+        Contenedor c = (Contenedor)getArguments()[0];
+        int i = Integer.parseInt(getArguments()[1].toString());
+        i++;
+        c.crearHijos("AgenteHijo"+i, new Object[]{c, i});
+        System.out.println("Morir");
+    }
     class Comportamiento extends CyclicBehaviour {
-        int recEnv=0;
-        String cont[]= new String[2];
+        int check=0;
+
         @Override
         public void action(){
             //todo lo que necesite hacer el agente
             //ANN, AG, Bayes, if else
-            System.out.print("Nombre Agente 2: ");
-            System.out.println(getName());
-            ACLMessage msj = blockingReceive(); //this is blocking it till it recieves a message
-
+            System.out.print("Agente 2: ");
+            ACLMessage msj = blockingReceive();         //this is blocking it till it recieves a message
             String idC = msj.getConversationId();
 
             if(idC.equalsIgnoreCase("COD0102")) {
-                try{
-                    System.out.println(msj);
-                    Sensores s = (Sensores) msj.getContentObject();
-                    System.out.println(s.getRiego()+" "+s.getTemperatura());
-                }catch (UnreadableException ex){
-                    Looger.getLogger(Agente2.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                /*String temperatura = msj.getContent();
-                if (Integer.parseInt(temperatura) > 35) {
-                    System.out.println("Prendiendo ventiladores");
-                    //...........
-                    Mensajes.enviar(ACLMessage.INFORM, "ReceptorInfo", "Ventilador prendido", "COD0201", getAgent());
-                    recEnv=1;
-                    cont[0]=temperatura;
-                }*/
-            }
-            else {
-                if(idC.equalsIgnoreCase("COD0302")) {
-                    String humedadHoja = msj.getContent();
-                    if (humedadHoja.equalsIgnoreCase("alta")) {
-                        System.out.println("No regar");
-                    }
-                    else{
-                        System.out.println("Regar");
-                    }
-
-                    if(recEnv==1){
-                        recEnv=2;
-                        cont[1]=humedadHoja;
-                    }
-                    Mensajes.enviar(ACLMessage.INFORM, "Ag3", "Estado de riesgo", "COD0203", getAgent());
+                String estado = msj.getContent();
+                if (estado == "yes") {
+                    System.out.println("Mensaje de 1 a 2");
+                    check=1;
                 }
             }
-
-            if(recEnv==2){
-                Mensajes.enviar(ACLMessage.INFORM, "Ag4", "REVISAR PH", "COD0204", getAgent());
-                recEnv=0;
+            else if ((idC.equalsIgnoreCase("COD0302"))&&(check==1)) {
+                System.out.println("Mensaje de 3 a 2");
+                String confrimacion = msj.getContent();
+                if (confrimacion.equalsIgnoreCase("yes")) {
+                    System.out.println("Ciclo completo");
+                }
+                else{
+                    System.out.println("Ciclo incompleto");
+                }
+                Mensajes.enviar(ACLMessage.INFORM, "Ag3", "Completar ciclo", "COD0203", getAgent());
+                check=2;
             }
-            //System.out.println(msj);
-            //System.out.println(msj.getContent());
-            //System.out.println(msj.getConversationId());
+            if(check==2){
+                //ciclo completo, crear nuevos hijos y matar padres
+                System.out.println("Agent 2 finished");
+                doDelete();
+            }
         }
     }
-
 }
